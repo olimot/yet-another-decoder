@@ -196,7 +196,7 @@ function EntryTable({
   type?: string;
 }) {
   return (
-    <dl className="grid grid-cols-[auto_1fr] border-1 rounded-sm p-1 gap-1 font-mono">
+    <dl className="grid grid-cols-[auto_1fr] border-1 rounded-sm px-2 py-1 gap-1 font-mono">
       {entries.map((entry, i) => (
         <EntryItem key={`${entry[0]}.${i}`} entry={entry} tableType={type} />
       ))}
@@ -209,10 +209,10 @@ function App() {
   const [parsedInput, type] = useMemo(() => parse(input), [input]);
 
   return (
-    <div className="max-w-[854px] mx-auto my-2">
+    <div className="max-w-[854px] mx-auto my-2 text-sm">
       <h1 className="text-2xl text-center my-2">YET ANOTHER DECODER</h1>
       <textarea
-        className="resize-y border-1 rounded-sm px-1 my-2 w-full min-h-30 font-mono"
+        className="resize-y border-1 rounded-sm px-2 py-1 my-2 w-full min-h-30 font-mono"
         value={input}
         onChange={(e) => setInput(e.target.value)}
       ></textarea>
@@ -227,7 +227,7 @@ function App() {
       {typeof parsedInput === "string" ? (
         <div
           className={clsx(
-            "border-1 rounded-sm px-1 my-2 min-h-30 whitespace-pre-line font-mono",
+            "border-1 rounded-sm px-2 py-1 my-2 min-h-30 whitespace-pre-line font-mono",
             input === "" && "text-gray-400 flex items-center justify-center"
           )}
         >
@@ -236,7 +236,9 @@ function App() {
             : parsedInput}
         </div>
       ) : (
-        <EntryTable entries={parsedInput} type={type} />
+        <div className="my-2">
+          <EntryTable entries={parsedInput} type={type} />
+        </div>
       )}
     </div>
   );
