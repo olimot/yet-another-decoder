@@ -175,7 +175,7 @@ function EntryItem({
         </div>
         {typeof value === "string" && (
           <div className="break-all truncate" title={value}>
-            {value}
+            {type.includes("%xx") ? decodeURIComponent(value) : value}
           </div>
         )}
       </dd>
