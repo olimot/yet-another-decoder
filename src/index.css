@@ -1,8 +1,1 @@
 @import "tailwindcss";
-
-*,
-::backdrop,
-:after,
-:before {
-  border-color: var(--color-gray-400, currentColor);
-}

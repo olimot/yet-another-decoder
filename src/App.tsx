@@ -25,6 +25,37 @@ const parseJSONObjectOnly = (
   return [Object.entries(parsed), `${type && `${type} `}JSON`];
 };
 
+function parse(value: unknown): [string | [string, unknown][], string] {
+  if (value === undefined) return ["", ""];
+  if (value === null) return ["null", "JSON"];
+  if (typeof value === "object") return [Object.entries(value), ""];
+  if (typeof value !== "string") return [`${value}`, typeof value];
+  if (!value) return ["", ""];
+
+  try {
+    return parseJSONObjectOnly(value);
+  } catch {
+    try {
+      return [parseAmpEqParams(value), "&="];
+    } catch {
+      try {
+        const decoded = decodeURIComponent(value);
+        try {
+          return parseJSONObjectOnly(decoded, "%xx");
+        } catch {
+          try {
+            return [parseAmpEqParams(decoded), "%xx &="];
+          } catch {
+            return [decoded, decoded === value ? "" : "%xx"];
+          }
+        }
+      } catch {
+        return [value, "string"];
+      }
+    }
+  }
+}
+
 function ParsingType({ type, isError }: { type: string; isError?: boolean }) {
   if (!type) return null;
 
@@ -61,37 +92,6 @@ function ParsingType({ type, isError }: { type: string; isError?: boolean }) {
   );
 }
 
-function parse(value: unknown): [string | [string, unknown][], string] {
-  if (value === undefined) return ["", ""];
-  if (value === null) return ["null", "JSON"];
-  if (typeof value === "object") return [Object.entries(value), ""];
-  if (typeof value !== "string") return [`${value}`, typeof value];
-  if (!value) return ["", ""];
-
-  try {
-    return [parseAmpEqParams(value), "&="];
-  } catch {
-    try {
-      return parseJSONObjectOnly(value);
-    } catch {
-      try {
-        const decoded = decodeURIComponent(value);
-        try {
-          return [parseAmpEqParams(decoded), "%xx &="];
-        } catch {
-          try {
-            return parseJSONObjectOnly(decoded, "%xx");
-          } catch {
-            return [decoded, decoded === value ? "" : "%xx"];
-          }
-        }
-      } catch {
-        return [value, "string"];
-      }
-    }
-  }
-}
-
 function EntryItem({
   entry,
   tableType,
@@ -99,8 +99,6 @@ function EntryItem({
   entry: [string, unknown];
   tableType?: string;
 }) {
-  const [isOpen, setOpen] = useState(false);
-
   const [key, value] = entry;
   const [parsedValue, valueType] = useMemo(() => parse(value), [value]);
   let type = valueType;
@@ -131,7 +129,7 @@ function EntryItem({
   if (parsedValue === null || typeof parsedValue === "string") {
     return (
       <>
-        <dt className="col-start-1" title={`${value}`}>
+        <dt className="col-start-1 ps-4" title={`${value}`}>
           <span className="text-pink-900">{key}</span>
         </dt>
         <dd
@@ -147,44 +145,64 @@ function EntryItem({
               />
             ))}
           </div>
-          <div className="break-all truncate" title={parsedValue}>
-            {parsedValue}
-          </div>
+          <input
+            type="text"
+            className="w-full"
+            title={parsedValue}
+            value={parsedValue}
+            readOnly
+          />
         </dd>
       </>
     );
   }
 
   return (
-    <>
-      <dt
-        className="col-start-1 cursor-pointer"
-        onClick={() => setOpen(!isOpen)}
-      >
-        {isOpen ? "▼" : "▶"} <span className="text-pink-900">{key}</span>
-      </dt>
-      <dd className="col-start-2 grid grid-cols-[auto_1fr]">
-        <div>
-          {type.split(" ").map((it, i) => (
-            <ParsingType
-              key={it}
-              type={it}
-              isError={i === 0 && expectedStartType?.includes(it) === false}
-            />
-          ))}
-        </div>
-        {typeof value === "string" && (
-          <div className="break-all truncate" title={value}>
-            {type.includes("%xx") ? decodeURIComponent(value) : value}
+    <details className="contents open:details-content:contents">
+      <summary className="contents">
+        <dt className="col-start-1 ps-1">
+          <span className="inline-block in-[details:open>summary]:rotate-90 me-1 cursor-pointer select-none">
+            ▶
+          </span>
+          <span
+            className="text-pink-900"
+            onClick={(e) => {
+              e.preventDefault();
+            }}
+          >
+            {key}
+          </span>
+        </dt>
+        <dd
+          className="col-start-2 grid grid-cols-[auto_1fr]"
+          onClick={(e) => {
+            e.preventDefault();
+          }}
+        >
+          <div>
+            {type.split(" ").map((it, i) => (
+              <ParsingType
+                key={it}
+                type={it}
+                isError={i === 0 && expectedStartType?.includes(it) === false}
+              />
+            ))}
           </div>
-        )}
-      </dd>
-      {isOpen && (
-        <dd className="col-start-1 col-span-2">
-          <EntryTable entries={parsedValue} type={type} />
+          {typeof value === "string" && (
+            <input
+              type="text"
+              className="w-full"
+              title={value}
+              value={type.includes("%xx") ? decodeURIComponent(value) : value}
+              readOnly
+            />
+          )}
         </dd>
-      )}
-    </>
+      </summary>
+      <dd className="col-start-1 col-span-2 ps-4">
+        <EntryTable entries={parsedValue} type={type} />
+      </dd>
+    </details>
   );
 }
 
@@ -196,7 +214,7 @@ function EntryTable({
   type?: string;
 }) {
   return (
-    <dl className="grid grid-cols-[auto_1fr] border-1 rounded-sm px-2 py-1 gap-1 font-mono">
+    <dl className="grid grid-cols-[auto_1fr] gap-1 font-mono border-l border-white [details:open:has(>summary:hover)>dd>&]:border-l-gray-200">
       {entries.map((entry, i) => (
         <EntryItem key={`${entry[0]}.${i}`} entry={entry} tableType={type} />
       ))}
@@ -209,37 +227,52 @@ function App() {
   const [parsedInput, type] = useMemo(() => parse(input), [input]);
 
   return (
-    <div className="max-w-[854px] mx-auto my-2 text-sm">
+    <div className="max-w-[854px] mx-auto my-2 text-sm px-2">
       <h1 className="text-2xl text-center my-2">YET ANOTHER DECODER</h1>
       <textarea
-        className="resize-y border-1 rounded-sm px-2 py-1 my-2 w-full min-h-30 font-mono"
+        className="resize-y border rounded-sm px-2 py-1 my-2 w-full min-h-30 font-mono"
         value={input}
         onChange={(e) => setInput(e.target.value)}
       ></textarea>
-      <div className="grid grid-cols-[auto_auto_1fr] justify-center items-center gap-1">
-        <span className="font-bold">Root</span>
-        <div>
-          {type.split(" ").map((it) => (
-            <ParsingType key={it} type={it} />
-          ))}
-        </div>
+      <div
+        className={clsx(
+          "border rounded-sm px-2 py-1 my-2 min-h-30 whitespace-pre-line font-mono",
+          input === "" && "text-gray-400 flex items-center justify-center"
+        )}
+      >
+        {typeof parsedInput === "string" ? (
+          <span>
+            {input === ""
+              ? "Decoded/Parsed data will be shown here"
+              : parsedInput}
+          </span>
+        ) : (
+          <div className="w-full min-h-full">
+            <div className="grid grid-cols-[auto_auto_1fr] justify-center items-center gap-1">
+              <span className="font-bold">Root</span>
+              <div>
+                {type.split(" ").map((it) => (
+                  <ParsingType key={it} type={it} />
+                ))}
+              </div>
+              {typeof input === "string" && (
+                <input
+                  type="text"
+                  className="w-full"
+                  title={input}
+                  value={
+                    type.includes("%xx") ? decodeURIComponent(input) : input
+                  }
+                  readOnly
+                />
+              )}
+            </div>
+            <div className="my-2">
+              <EntryTable entries={parsedInput} type={type} />
+            </div>
+          </div>
+        )}
       </div>
-      {typeof parsedInput === "string" ? (
-        <div
-          className={clsx(
-            "border-1 rounded-sm px-2 py-1 my-2 min-h-30 whitespace-pre-line font-mono",
-            input === "" && "text-gray-400 flex items-center justify-center"
-          )}
-        >
-          {input === ""
-            ? "Decoded/Parsed data will be shown here"
-            : parsedInput}
-        </div>
-      ) : (
-        <div className="my-2">
-          <EntryTable entries={parsedInput} type={type} />
-        </div>
-      )}
     </div>
   );
 }
