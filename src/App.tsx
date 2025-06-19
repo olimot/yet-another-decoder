@@ -1,19 +1,32 @@
 import clsx from "clsx";
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState, type CSSProperties } from "react";
 
-const parseAmpEqParams = (value: string) => {
-  const qmIdx = value.indexOf("?");
-  if (qmIdx > -1 && (!value.includes("&") || qmIdx < value.indexOf("&"))) {
-    throw new Error("Could be URL");
+const parseSpecialFormats = (value: string) => {
+  if (/[a-z0-9+-.]+:$/.test(value)) throw new Error("It is a protocol.");
+
+  try {
+    const entries: [string, string][] = [];
+    const url = new URL(value);
+    if (url.hash) entries.push(["hash", url.hash]);
+    if (url.host) entries.push(["host", url.host]);
+    if (url.hostname !== url.host) entries.push(["hostname", url.hostname]);
+    if (url.password) entries.push(["password", url.password]);
+    if (url.pathname) entries.push(["pathname", url.pathname]);
+    if (url.port) entries.push(["port", url.port]);
+    entries.push(["protocol", url.protocol]);
+    entries.push(["searchParams", `${url.searchParams}`]);
+    return [entries, "URL"] as [[string, string][], string];
+  } catch {
+    if (!value.includes("=")) throw new Error("No equal in the value");
+    let entries: string[][];
+    if (value.includes("; ")) {
+      entries = value.split("; ").map((entry) => entry.split(/(?<=^[^=]*)=/));
+      return [entries, ";="] as [[string, string][], string];
+    }
+
+    entries = value.split("&").map((entry) => entry.split(/(?<=^[^=]*)=/));
+    return [entries, "&="] as [[string, string][], string];
   }
-  if (!value.includes("&") && !value.includes("=")) {
-    throw new Error("No ampersand and no equal in the text");
-  }
-  const entries = value.split("&").map((entry) => entry.split(/(?<=^[^=]*)=/));
-  if (!entries.length) {
-    throw new Error("No ampersand and no equal in the text");
-  }
-  return entries as [string, string][];
 };
 
 const parseJSONObjectOnly = (
@@ -36,7 +49,7 @@ function parse(value: unknown): [string | [string, unknown][], string] {
     return parseJSONObjectOnly(value);
   } catch {
     try {
-      return [parseAmpEqParams(value), "&="];
+      return parseSpecialFormats(value);
     } catch {
       try {
         const decoded = decodeURIComponent(value);
@@ -44,7 +57,8 @@ function parse(value: unknown): [string | [string, unknown][], string] {
           return parseJSONObjectOnly(decoded, "%xx");
         } catch {
           try {
-            return [parseAmpEqParams(decoded), "%xx &="];
+            const [v, t] = parseSpecialFormats(decoded);
+            return [v, `%xx${t && ` ${t}`}`];
           } catch {
             return [decoded, decoded === value ? "" : "%xx"];
           }
@@ -63,28 +77,40 @@ function ParsingType({ type, isError }: { type: string; isError?: boolean }) {
     return (
       <span
         className={clsx(
-          "inline-block me-1 px-1 rounded-md font-mono text-xs bg-red-600 text-white"
+          "inline-block me-1 px-1 rounded-md font-mono text-xs bg-red-600 text-white select-none cursor-default"
         )}
       >
         {type}
       </span>
     );
   }
-
+  let colorSet = "bg-gray-100";
+  switch (type) {
+    case "%xx":
+      colorSet = "bg-blue-200";
+      break;
+    case "&=":
+      colorSet = "bg-blue-600 text-white";
+      break;
+    case "JSON":
+      colorSet = "bg-green-700 text-white";
+      break;
+    case "URL":
+      colorSet = "bg-amber-700 text-white";
+      break;
+    case "string":
+    case "number":
+    case "boolean":
+    case "object":
+    case "undefined":
+      colorSet = "bg-green-100";
+      break;
+  }
   return (
     <span
       className={clsx(
-        "inline-block me-1 px-1 rounded-md font-mono text-xs",
-        type === "%xx" && "bg-blue-100",
-        type === "&=" && "bg-blue-600 text-white",
-        type === "JSON" && "bg-green-700 text-white",
-        (!type ||
-          type === "string" ||
-          type === "number" ||
-          type === "boolean" ||
-          type === "object" ||
-          type === "undefined") &&
-          "bg-green-100"
+        "inline-block me-1 px-1 rounded-md font-mono text-xs select-none cursor-default",
+        colorSet
       )}
     >
       {type}
@@ -95,24 +121,26 @@ function ParsingType({ type, isError }: { type: string; isError?: boolean }) {
 function EntryItem({
   entry,
   tableType,
+  depth,
 }: {
   entry: [string, unknown];
   tableType?: string;
+  depth: number;
 }) {
   const [key, value] = entry;
   const [parsedValue, valueType] = useMemo(() => parse(value), [value]);
+  const [isOpen, setOpen] = useState(false);
+  const keyInputRef = useRef<HTMLInputElement>(null);
   let type = valueType;
 
   let expectedStartType: string[] | undefined;
-  if (tableType?.endsWith("&=")) expectedStartType = ["%xx"];
+  if (tableType?.endsWith("=")) expectedStartType = ["%xx"];
   if (tableType?.endsWith("JSON") || tableType === "object") {
     expectedStartType = ["string", "number", "boolean", "object"];
   }
 
   if (valueType === "") {
-    if (tableType?.endsWith("&=")) {
-      type = "%xx";
-    }
+    if (tableType?.endsWith("=")) type = "%xx";
     if (!tableType || tableType.endsWith("JSON") || tableType === "object") {
       type = typeof parsedValue;
     }
@@ -121,104 +149,96 @@ function EntryItem({
   if (
     (tableType?.endsWith("JSON") || tableType === "object") &&
     !type.startsWith("%xx") &&
-    (type.endsWith("&=") || type.endsWith("JSON"))
+    (type.endsWith("=") || type.endsWith("JSON"))
   ) {
     type = `string ${type}`;
   }
 
-  if (parsedValue === null || typeof parsedValue === "string") {
-    return (
-      <>
-        <dt className="col-start-1 ps-4" title={`${value}`}>
-          <span className="text-pink-900">{key}</span>
-        </dt>
-        <dd
-          className="col-start-2 grid grid-cols-[auto_1fr]"
-          title={parsedValue}
-        >
-          <div>
-            {type.split(" ").map((it, i) => (
-              <ParsingType
-                key={it}
-                type={it}
-                isError={i === 0 && expectedStartType?.includes(it) === false}
-              />
-            ))}
-          </div>
+  const style = {
+    "--depth-padding": `calc(var(--spacing) * ${depth} * 4.5)`,
+  } as CSSProperties;
+
+  const hasStructure = parsedValue !== null && typeof parsedValue === "object";
+
+  return (
+    <>
+      <dt
+        className={clsx(
+          "col-start-1 pe-1 [:where(&:hover,&:has(+:hover))]:bg-gray-100 [&:focus-within,&:has(+:focus-within)]:bg-blue-100",
+          hasStructure
+            ? "ps-(--depth-padding)"
+            : "ps-[calc(var(--depth-padding)+(var(--spacing)*3))]"
+        )}
+        style={style}
+        onClick={() => keyInputRef.current?.focus()}
+      >
+        {hasStructure && (
+          <span
+            className={clsx(
+              "inline-block me-0.5 cursor-pointer select-none",
+              isOpen && "rotate-90"
+            )}
+            onClick={() => setOpen(!isOpen)}
+          >
+            ▶
+          </span>
+        )}
+        <input
+          className="text-pink-900"
+          value={key}
+          ref={keyInputRef}
+          onClick={(e) => e.stopPropagation()}
+          onChange={(e) => e.preventDefault()}
+        />
+      </dt>
+      <dd
+        className="col-start-2 grid grid-cols-[auto_1fr] [:where(:hover+&,&:hover)]:bg-gray-100 [:focus-within+&,&:focus-within]:bg-blue-100"
+        onClick={(e) => e.preventDefault()}
+      >
+        <div>
+          {type.split(" ").map((it, i) => (
+            <ParsingType
+              key={it}
+              type={it}
+              isError={i === 0 && expectedStartType?.includes(it) === false}
+            />
+          ))}
+        </div>
+        {(typeof value === "string" ||
+          typeof value === "boolean" ||
+          typeof value === "number" ||
+          typeof value === "undefined") && (
           <input
             type="text"
             className="w-full"
-            title={parsedValue}
-            value={parsedValue}
-            readOnly
+            title={`${value}`}
+            value={
+              typeof value === "string" && type.includes("%xx")
+                ? decodeURIComponent(value)
+                : `${value}`
+            }
+            onChange={(e) => e.preventDefault()}
           />
-        </dd>
-      </>
-    );
-  }
-
-  return (
-    <details className="contents open:details-content:contents">
-      <summary className="contents">
-        <dt className="col-start-1 ps-1">
-          <span className="inline-block in-[details:open>summary]:rotate-90 me-1 cursor-pointer select-none">
-            ▶
-          </span>
-          <span
-            className="text-pink-900"
-            onClick={(e) => {
-              e.preventDefault();
-            }}
-          >
-            {key}
-          </span>
-        </dt>
+        )}
+      </dd>
+      {hasStructure && (
         <dd
-          className="col-start-2 grid grid-cols-[auto_1fr]"
-          onClick={(e) => {
-            e.preventDefault();
-          }}
+          className={clsx("col-start-1 col-span-2", !isOpen && "hidden")}
+          style={style}
         >
-          <div>
-            {type.split(" ").map((it, i) => (
-              <ParsingType
-                key={it}
-                type={it}
-                isError={i === 0 && expectedStartType?.includes(it) === false}
+          <dl className="grid grid-cols-[auto_1fr] gap-y-1 relative before:hidden [:is(:hover+dd+dd,:hover+dd,:focus-within+dd+dd,:focus-within+dd)>&]:before:block before:absolute before:w-px before:h-full before:bg-gray-200 [:is(:focus-within+dd+dd,:focus-within+dd)>&]:before:bg-blue-200 before:left-[calc(var(--depth-padding)+(var(--spacing)*3))]">
+            {parsedValue.map((entry, i) => (
+              <EntryItem
+                key={`${entry[0]}.${i}`}
+                entry={entry}
+                tableType={type}
+                depth={depth + 1}
               />
             ))}
-          </div>
-          {typeof value === "string" && (
-            <input
-              type="text"
-              className="w-full"
-              title={value}
-              value={type.includes("%xx") ? decodeURIComponent(value) : value}
-              readOnly
-            />
-          )}
+          </dl>
         </dd>
-      </summary>
-      <dd className="col-start-1 col-span-2 ps-4">
-        <EntryTable entries={parsedValue} type={type} />
-      </dd>
-    </details>
-  );
-}
-
-function EntryTable({
-  entries,
-  type,
-}: {
-  entries: [string, unknown][];
-  type?: string;
-}) {
-  return (
-    <dl className="grid grid-cols-[auto_1fr] gap-1 font-mono border-l border-white [details:open:has(>summary:hover)>dd>&]:border-l-gray-200">
-      {entries.map((entry, i) => (
-        <EntryItem key={`${entry[0]}.${i}`} entry={entry} tableType={type} />
-      ))}
-    </dl>
+      )}
+    </>
   );
 }
 
@@ -227,16 +247,18 @@ function App() {
   const [parsedInput, type] = useMemo(() => parse(input), [input]);
 
   return (
-    <div className="max-w-[854px] mx-auto my-2 text-sm px-2">
-      <h1 className="text-2xl text-center my-2">YET ANOTHER DECODER</h1>
+    <div className="max-w-[854px] mx-auto my-2 text-sm px-2 selection:text-white selection:bg-blue-600 font-mono">
+      <h1 className="text-2xl text-center my-2 font-sans">
+        YET ANOTHER DECODER
+      </h1>
       <textarea
-        className="resize-y border rounded-sm px-2 py-1 my-2 w-full min-h-30 font-mono"
+        className="resize-y border rounded-sm px-2 py-1 my-2 w-full min-h-30"
         value={input}
         onChange={(e) => setInput(e.target.value)}
       ></textarea>
       <div
         className={clsx(
-          "border rounded-sm px-2 py-1 my-2 min-h-30 whitespace-pre-line font-mono",
+          "border rounded-sm px-2 py-1 my-2 min-h-30 whitespace-pre-line",
           input === "" && "text-gray-400 flex items-center justify-center"
         )}
       >
@@ -268,7 +290,16 @@ function App() {
               )}
             </div>
             <div className="my-2">
-              <EntryTable entries={parsedInput} type={type} />
+              <dl className="grid grid-cols-[auto_1fr] gap-y-1 border-l border-white relative">
+                {parsedInput.map((entry, i) => (
+                  <EntryItem
+                    key={`${entry[0]}.${i}`}
+                    entry={entry}
+                    tableType={type}
+                    depth={0}
+                  />
+                ))}
+              </dl>
             </div>
           </div>
         )}
