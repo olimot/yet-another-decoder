@@ -7,7 +7,10 @@ import {
   type CSSProperties,
 } from "react";
 
-const parseSpecialFormats = (value: string) => {
+const parseSpecialFormats = (
+  value: string,
+  prevType = ""
+): [[string, string][], string] => {
   if (/[a-z0-9+-.]+:[0-9]*$/.test(value)) {
     throw new Error("It is a protocol or host.");
   }
@@ -23,17 +26,17 @@ const parseSpecialFormats = (value: string) => {
     if (url.port) entries.push(["port", url.port]);
     entries.push(["protocol", url.protocol]);
     entries.push(["searchParams", `${url.searchParams}`]);
-    return [entries, "URL"] as [[string, string][], string];
+    return [entries, `${prevType && `${prevType} `}URL`];
   } catch {
     if (!value.includes("=")) throw new Error("No equal in the value");
     let entries: string[][];
     if (value.includes("; ")) {
       entries = value.split("; ").map((entry) => entry.split(/(?<=^[^=]*)=/));
-      return [entries, ";="] as [[string, string][], string];
+      return [entries as [string, string][], `${prevType && `${prevType} `};=`];
     }
 
     entries = value.split("&").map((entry) => entry.split(/(?<=^[^=]*)=/));
-    return [entries, "&="] as [[string, string][], string];
+    return [entries as [string, string][], `${prevType && `${prevType} `}&=`];
   }
 };
 
@@ -48,7 +51,7 @@ const parseJSONObjectOnly = (
 
 function parse(value: unknown): [string | [string, unknown][], string] {
   if (value === undefined) return ["", ""];
-  if (value === null) return ["null", "JSON"];
+  if (value === null) return ["null", "object"];
   if (typeof value === "object") return [Object.entries(value), ""];
   if (typeof value !== "string") return [`${value}`, typeof value];
   if (!value) return ["", ""];
@@ -65,14 +68,13 @@ function parse(value: unknown): [string | [string, unknown][], string] {
           return parseJSONObjectOnly(decoded, "%xx");
         } catch {
           try {
-            const [v, t] = parseSpecialFormats(decoded);
-            return [v, `%xx${t && ` ${t}`}`];
+            return parseSpecialFormats(decoded, "%xx");
           } catch {
             return [decoded, decoded === value ? "" : "%xx"];
           }
         }
       } catch {
-        return [value, "string"];
+        return [value, ""];
       }
     }
   }
