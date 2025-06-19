@@ -96,7 +96,7 @@ function ParsingType({ type, isError }: { type: string; isError?: boolean }) {
       colorSet = "bg-green-700 text-white";
       break;
     case "URL":
-      colorSet = "bg-amber-700 text-white";
+      colorSet = "bg-amber-300";
       break;
     case "string":
     case "number":
@@ -128,10 +128,9 @@ function EntryItem({
   depth: number;
 }) {
   const [key, value] = entry;
-  const [parsedValue, valueType] = useMemo(() => parse(value), [value]);
+  const [parsedValue, parsedType] = useMemo(() => parse(value), [value]);
   const [isOpen, setOpen] = useState(false);
   const keyInputRef = useRef<HTMLInputElement>(null);
-  let type = valueType;
 
   let expectedStartType: string[] | undefined;
   if (tableType?.endsWith("=")) expectedStartType = ["%xx"];
@@ -139,19 +138,17 @@ function EntryItem({
     expectedStartType = ["string", "number", "boolean", "object"];
   }
 
-  if (valueType === "") {
-    if (tableType?.endsWith("=")) type = "%xx";
-    if (!tableType || tableType.endsWith("JSON") || tableType === "object") {
-      type = typeof parsedValue;
-    }
-  }
-
-  if (
+  let type = "";
+  if (parsedType === "" && tableType?.endsWith("=")) {
+    type = "%xx";
+  } else if (
     (tableType?.endsWith("JSON") || tableType === "object") &&
-    !type.startsWith("%xx") &&
-    (type.endsWith("=") || type.endsWith("JSON"))
+    !parsedType.startsWith("%xx") &&
+    typeof value !== parsedType
   ) {
-    type = `string ${type}`;
+    type = `${typeof value}${parsedType && ` ${parsedType}`}`;
+  } else {
+    type = parsedType;
   }
 
   const style = {
