@@ -1,5 +1,11 @@
 import clsx from "clsx";
-import { useMemo, useRef, useState, type CSSProperties } from "react";
+import {
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type CSSProperties,
+} from "react";
 
 const parseSpecialFormats = (value: string) => {
   if (/[a-z0-9+-.]+:[0-9]*$/.test(value)) {
@@ -120,6 +126,50 @@ function ParsingType({ type, isError }: { type: string; isError?: boolean }) {
   );
 }
 
+function EntryValue({ value, type }: { value: unknown; type: string }) {
+  const ref = useRef<HTMLInputElement>(null);
+  const inputValue = useMemo(
+    () =>
+      typeof value === "string" && type.includes("%xx")
+        ? decodeURIComponent(value)
+        : String(value),
+    [value, type]
+  );
+
+  useEffect(() => {
+    if (!ref.current) return;
+    const element = ref.current;
+    element.value = inputValue;
+    element.style.setProperty("width", `${element.scrollWidth}px`);
+  }, [inputValue]);
+
+  switch (typeof value) {
+    case "string":
+    case "boolean":
+    case "number":
+    case "bigint":
+    case "undefined":
+    case "symbol":
+    case "function":
+      return (
+        <input
+          ref={ref}
+          type="text"
+          className="min-w-full outline-0"
+          title={String(value)}
+          value={
+            typeof value === "string" && type.includes("%xx")
+              ? decodeURIComponent(value)
+              : String(value)
+          }
+          onChange={(e) => e.preventDefault()}
+        />
+      );
+    default:
+      return null;
+  }
+}
+
 function EntryItem({
   entry,
   tableType,
@@ -183,7 +233,7 @@ function EntryItem({
           </span>
         )}
         <input
-          className="text-pink-900"
+          className="text-pink-900 outline-0"
           value={key}
           ref={keyInputRef}
           onClick={(e) => e.stopPropagation()}
@@ -194,7 +244,7 @@ function EntryItem({
         className="col-start-2 grid grid-cols-[auto_1fr] [:where(:hover+&,&:hover)]:bg-gray-100 [:focus-within+&,&:focus-within]:bg-blue-100"
         onClick={(e) => e.preventDefault()}
       >
-        <div>
+        <div className="flex justify-start items-center">
           {type.split(" ").map((it, i) => (
             <ParsingType
               key={it}
@@ -203,22 +253,7 @@ function EntryItem({
             />
           ))}
         </div>
-        {(typeof value === "string" ||
-          typeof value === "boolean" ||
-          typeof value === "number" ||
-          typeof value === "undefined") && (
-          <input
-            type="text"
-            className="w-full"
-            title={`${value}`}
-            value={
-              typeof value === "string" && type.includes("%xx")
-                ? decodeURIComponent(value)
-                : `${value}`
-            }
-            onChange={(e) => e.preventDefault()}
-          />
-        )}
+        <EntryValue value={value} type={type} />
       </dd>
       {hasStructure && (
         <dd
@@ -288,7 +323,7 @@ function App() {
                 />
               )}
             </div>
-            <div className="my-2">
+            <div className="my-2 overflow-x-scroll">
               <dl className="grid grid-cols-[auto_1fr] gap-y-1 border-l border-white relative">
                 {parsedInput.map((entry, i) => (
                   <EntryItem
