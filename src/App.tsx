@@ -2,7 +2,9 @@ import clsx from "clsx";
 import { useMemo, useRef, useState, type CSSProperties } from "react";
 
 const parseSpecialFormats = (value: string) => {
-  if (/[a-z0-9+-.]+:$/.test(value)) throw new Error("It is a protocol.");
+  if (/[a-z0-9+-.]+:[0-9]*$/.test(value)) {
+    throw new Error("It is a protocol or host.");
+  }
 
   try {
     const entries: [string, string][] = [];
