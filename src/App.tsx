@@ -34,7 +34,7 @@ const parseSpecialFormats = (
       entries = value.split("; ").map((entry) => entry.split(/(?<=^[^=]*)=/));
       return [entries as [string, string][], `${prevType && `${prevType} `};=`];
     }
-
+    if (!value.includes("&") && value.endsWith("=")) throw new Error("base64");
     entries = value.split("&").map((entry) => entry.split(/(?<=^[^=]*)=/));
     return [entries as [string, string][], `${prevType && `${prevType} `}&=`];
   }
