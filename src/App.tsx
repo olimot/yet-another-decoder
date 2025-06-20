@@ -205,12 +205,8 @@ function EntryItem({
     type = parsedType;
   }
 
-  const style = {
-    "--depth-padding": `calc(var(--spacing) * ${depth} * 4.5)`,
-  } as CSSProperties;
-
+  const depthPadding = `calc(var(--spacing) * ${depth} * 4.5)`;
   const hasStructure = parsedValue !== null && typeof parsedValue === "object";
-
   return (
     <>
       <dt
@@ -220,7 +216,7 @@ function EntryItem({
             ? "ps-(--depth-padding)"
             : "ps-[calc(var(--depth-padding)+(var(--spacing)*3))]"
         )}
-        style={style}
+        style={{ "--depth-padding": depthPadding } as CSSProperties}
         onClick={() => keyInputRef.current?.focus()}
       >
         {hasStructure && (
@@ -260,7 +256,7 @@ function EntryItem({
       {hasStructure && (
         <dd
           className={clsx("col-start-1 col-span-2", !isOpen && "hidden")}
-          style={style}
+          style={{ "--depth-padding": depthPadding } as CSSProperties}
         >
           <dl className="grid grid-cols-[auto_1fr] gap-y-1 relative before:hidden [:is(:hover+dd+dd,:hover+dd,:focus-within+dd+dd,:focus-within+dd)>&]:before:block before:absolute before:w-px before:h-full before:bg-gray-200 [:is(:focus-within+dd+dd,:focus-within+dd)>&]:before:bg-blue-200 before:left-[calc(var(--depth-padding)+(var(--spacing)*3))]">
             {parsedValue.map((entry, i) => (
