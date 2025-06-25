@@ -211,10 +211,10 @@ function EntryItem({
     <>
       <dt
         className={clsx(
-          "col-start-1 pe-1 [:where(&:hover,&:has(+:hover))]:bg-gray-100 [&:focus-within,&:has(+:focus-within)]:bg-blue-100",
+          "col-start-1 pe-1 [:where(&:hover,&:has(+:hover))]:bg-gray-100 [&:focus-within,&:has(+:focus-within)]:bg-blue-100 flex gap-0.5 items-center",
           hasStructure
             ? "ps-(--depth-padding)"
-            : "ps-[calc(var(--depth-padding)+(var(--spacing)*3))]"
+            : "ps-[calc(var(--depth-padding)+(var(--spacing)*4.5))]"
         )}
         style={{ "--depth-padding": depthPadding } as CSSProperties}
         onClick={() => keyInputRef.current?.focus()}
@@ -222,12 +222,19 @@ function EntryItem({
         {hasStructure && (
           <span
             className={clsx(
-              "inline-block me-0.5 cursor-pointer select-none",
+              "cursor-pointer select-none",
               isOpen && "rotate-90"
             )}
             onClick={() => setOpen(!isOpen)}
           >
-            ▶
+            <svg
+              className="w-3 h-3"
+              viewBox="0 0 1024 1024"
+              fill="currentColor"
+            >
+              <path d="M 768 512 l -512 -512 l 0 1024"></path>
+              {/* <path d="M 768 512 l -512 -512 l -91 91 l 421 421 l -421 421 l 91 91"></path> */}
+            </svg>
           </span>
         )}
         <input
