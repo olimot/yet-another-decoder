@@ -222,7 +222,7 @@ function EntryItem({
         {hasStructure && (
           <span
             className={clsx(
-              "cursor-pointer select-none",
+              "p-0.5 cursor-pointer select-none",
               isOpen && "rotate-90"
             )}
             onClick={() => setOpen(!isOpen)}
