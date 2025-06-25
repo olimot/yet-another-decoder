@@ -226,7 +226,10 @@ function EntryItem({
               "p-0.5 cursor-pointer select-none",
               isOpen && "rotate-90"
             )}
-            onClick={() => setOpen(!isOpen)}
+            onClick={(e) => {
+              e.stopPropagation();
+              setOpen(!isOpen);
+            }}
           >
             <svg
               className="w-3 h-3"
