@@ -265,7 +265,7 @@ function EntryItem({
           className={clsx("col-start-1 col-span-2", !isOpen && "hidden")}
           style={{ "--depth-padding": depthPadding } as CSSProperties}
         >
-          <dl className="grid grid-cols-[auto_1fr] gap-y-1 relative before:hidden [:is(:hover+dd+dd,:hover+dd,:focus-within+dd+dd,:focus-within+dd)>&]:before:block before:absolute before:w-px before:h-full before:bg-gray-200 [:is(:focus-within+dd+dd,:focus-within+dd)>&]:before:bg-blue-200 before:left-[calc(var(--depth-padding)+(var(--spacing)*3))]">
+          <dl className="grid grid-cols-[auto_1fr] gap-y-1 relative before:hidden [:is(:hover+dd+dd,:hover+dd,:focus-within+dd+dd,:focus-within+dd)>&]:before:block before:absolute before:w-px before:h-full before:bg-gray-200 [:is(:focus-within+dd+dd,:focus-within+dd)>&]:before:bg-blue-200 before:left-[calc(var(--depth-padding)+(var(--spacing)*4.5))] before:z-10">
             {parsedValue.map((entry, i) => (
               <EntryItem
                 key={`${entry[0]}.${i}`}
