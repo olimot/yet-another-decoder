@@ -220,7 +220,8 @@ function EntryItem({
         onClick={() => keyInputRef.current?.focus()}
       >
         {hasStructure && (
-          <span
+          <button
+            type="button"
             className={clsx(
               "p-0.5 cursor-pointer select-none",
               isOpen && "rotate-90"
@@ -235,7 +236,7 @@ function EntryItem({
               <path d="M 768 512 l -512 -512 l 0 1024"></path>
               {/* <path d="M 768 512 l -512 -512 l -91 91 l 421 421 l -421 421 l 91 91"></path> */}
             </svg>
-          </span>
+          </button>
         )}
         <input
           className="text-pink-900 outline-0"
