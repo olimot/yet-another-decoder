@@ -150,7 +150,6 @@ function EntryValue({ value, type }: { value: unknown; type: string }) {
     case "boolean":
     case "number":
     case "bigint":
-    case "undefined":
     case "symbol":
     case "function":
       return (
@@ -167,6 +166,8 @@ function EntryValue({ value, type }: { value: unknown; type: string }) {
           onChange={(e) => e.preventDefault()}
         />
       );
+    case "object":
+    case "undefined":
     default:
       return null;
   }
