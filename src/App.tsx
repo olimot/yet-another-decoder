@@ -23,7 +23,7 @@ function App() {
             checked={version === 1}
             onChange={() => setVersion(1)}
           />
-          <div>Version 1</div>
+          <div>Fixed-Width View</div>
         </label>
         <label className="flex items-center gap-1">
           <input
@@ -32,7 +32,7 @@ function App() {
             checked={version === 2}
             onChange={() => setVersion(2)}
           />
-          <div>Version 2</div>
+          <div>Compact View</div>
         </label>
       </div>
       <textarea
