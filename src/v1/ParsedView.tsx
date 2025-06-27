@@ -206,7 +206,7 @@ function EntryItem({
     type = parsedType;
   }
 
-  const depthPadding = `calc(var(--spacing) * ${depth} * 4.5)`;
+  const depthPadding = `calc(var(--spacing) * (2 + ${depth} * 4.5))`;
   const hasStructure = parsedValue !== null && typeof parsedValue === "object";
   return (
     <>
@@ -294,25 +294,17 @@ export default function ParsedView({ input }: { input: string }) {
       {input === "" ? "Decoded/Parsed data will be shown here" : parsedInput}
     </span>
   ) : (
-    <div className="w-full min-h-full">
-      <div className="grid grid-cols-[auto_auto_1fr] justify-center items-center gap-1">
+    <div className="contents">
+      <div className="grid grid-cols-[auto_auto_1fr] items-center gap-1 ps-2">
         <span className="font-bold">Root</span>
         <div>
           {type.split(" ").map((it) => (
             <ParsingType key={it} type={it} />
           ))}
         </div>
-        {typeof input === "string" && (
-          <input
-            type="text"
-            className="w-full"
-            title={input}
-            value={type.includes("%xx") ? decodeURIComponent(input) : input}
-            readOnly
-          />
-        )}
+        <EntryValue value={input} type={type} />
       </div>
-      <div className="my-2 overflow-x-scroll">
+      <div className="my-2">
         <dl className="grid grid-cols-[auto_1fr] gap-y-1 border-l border-white relative">
           {parsedInput.map((entry, i) => (
             <EntryItem
