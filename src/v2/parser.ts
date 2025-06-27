@@ -90,7 +90,8 @@ export function parse(
   let output = entry;
   let nDecoded = 0;
   for (nDecoded = 0; nDecoded < 3; nDecoded++) {
-    if (/^[a-zA-Z0-9+/-_]=*$/.test(text)) break; // base64
+    if (/^[a-zA-Z0-9+/_-]+=*$/.test(text)) break; // base64
+
     let json: object | null | undefined;
     try {
       const value = JSON.parse(text);
@@ -128,15 +129,16 @@ export function parse(
     }
 
     if (text.includes("=")) {
+      if (text.includes("; ")) {
+        const cookies = parseEqMap(text, "Cookies", "; ");
+        if (cookies !== undefined) {
+          output = { ...entry, parsed: cookies };
+          break;
+        }
+      }
       const searchParams = parseEqMap(text, "URLSearchParams", "&");
       if (searchParams !== undefined) {
         output = { ...entry, parsed: searchParams };
-        break;
-      }
-
-      const cookies = parseEqMap(text, "Cookies", "; ");
-      if (cookies !== undefined) {
-        output = { ...entry, parsed: cookies };
         break;
       }
     }
