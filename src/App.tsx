@@ -67,7 +67,8 @@ function EntryItem({
             className={clsx(
               "whitespace-nowrap",
               !depth && "font-bold",
-              warning ? "text-red-600" : "text-pink-900"
+              "text-pink-900",
+              warning && "underline decoration-wavy decoration-green-700"
             )}
             onPointerDown={(e) => {
               const div = e.currentTarget;
@@ -98,7 +99,7 @@ function EntryItem({
         <div
           className={clsx(
             "flex-auto whitespace-nowrap min-h-5",
-            entry.type === "text" ? "text-blue-900" : "text-blue-700"
+            entry.type !== "text" && "text-blue-700"
           )}
           tabIndex={0}
           title={entry.type === "text" ? "string" : typeof entry.value}
