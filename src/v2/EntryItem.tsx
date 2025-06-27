@@ -5,13 +5,13 @@ import { urldecode, type ParsedEntry } from "./parser";
 function getColorSet(type: string) {
   switch (type) {
     case "JSON":
-      return "bg-cyan-200 text-cyan-800";
+      return "bg-green-700 text-white";
     case "URL":
-      return "bg-amber-100 text-amber-800";
+      return "bg-amber-300";
     case "Cookie":
       return "bg-pink-900";
     case "URLSearchParams":
-      return "bg-orange-100 text-orange-800";
+      return "bg-blue-600 text-white";
     default:
       return "bg-gray-100";
   }
@@ -77,23 +77,23 @@ export default function EntryItem({
             className={clsx(
               "whitespace-nowrap",
               depth ? "text-pink-900" : "font-bold",
-              warning && "underline decoration-wavy decoration-green-700"
+              warning && "underline decoration-wavy decoration-red-600"
             )}
             onPointerDown={selectAllText}
           >
             {depth ? entry.name : "Root"}
           </div>
+          :
           {entry.type === "text" && entry.parsed && (
             <div
               className={clsx(
-                "rounded-md px-1 ms-0.5 text-xs",
+                "rounded-md px-1 ms-1 text-xs",
                 getColorSet(entry.parsed?.type)
               )}
             >
               {entry.parsed?.type}
             </div>
           )}
-          :
         </div>
         <div
           className={clsx(
