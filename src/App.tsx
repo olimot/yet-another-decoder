@@ -5,13 +5,13 @@ import { parse, type ParsedEntry } from "./parser";
 function getColorSet(type: string) {
   switch (type) {
     case "JSON":
-      return "bg-green-200 text-green-800";
+      return "bg-cyan-200 text-cyan-800";
     case "URL":
-      return "bg-amber-300 text-amber-900";
+      return "bg-amber-100 text-amber-800";
     case "Cookie":
       return "bg-pink-900";
     case "URLSearchParams":
-      return "bg-fuchsia-100 text-fuchsia-900";
+      return "bg-orange-100 text-orange-800";
     default:
       return "bg-gray-100";
   }
@@ -40,7 +40,7 @@ function EntryItem({
 
   return (
     <div
-      className="contents"
+      className="grid grid-rows-[auto_auto]"
       style={{ "--depth": `${depth}` } as CSSProperties}
     >
       <div className="flex items-center relative hover:bg-gray-100 focus-within:bg-blue-100 hover:focus-within:bg-blue-100">
@@ -48,7 +48,7 @@ function EntryItem({
           <button
             type="button"
             className={clsx(
-              "cursor-pointer p-1 absolute left-[calc((4*var(--depth)-4)*var(--spacing))]",
+              "cursor-pointer p-1 absolute left-[calc((4*var(--depth)-2)*var(--spacing))]",
               isOpen && "rotate-90"
             )}
             onClick={() => setOpen(!isOpen)}
@@ -59,7 +59,7 @@ function EntryItem({
           </button>
         )}
         <div
-          className="ps-[calc(4*var(--depth)*var(--spacing))] pe-1 flex items-center justify-center"
+          className="ps-[calc((4*var(--depth)+2)*var(--spacing))] pe-1 flex items-center justify-center"
           title={warning && `Warning: ${warning}`}
           tabIndex={0}
         >
@@ -69,6 +69,17 @@ function EntryItem({
               !depth && "font-bold",
               warning ? "text-red-600" : "text-pink-900"
             )}
+            onPointerDown={(e) => {
+              const div = e.currentTarget;
+              const sel = window.getSelection();
+              if (sel?.focusNode === div) {
+                e.preventDefault();
+                sel.collapseToEnd();
+              } else {
+                e.preventDefault();
+                sel?.selectAllChildren(div);
+              }
+            }}
           >
             {depth ? entry.name : "Root"}
           </div>
@@ -86,26 +97,40 @@ function EntryItem({
         </div>
         <div
           className={clsx(
-            "flex-auto whitespace-nowrap",
+            "flex-auto whitespace-nowrap min-h-5",
             entry.type === "text" ? "text-blue-900" : "text-blue-700"
           )}
           tabIndex={0}
           title={entry.type === "text" ? "string" : typeof entry.value}
         >
-          {parentType === "URLSearchParams" || parentType === "Cookies"
-            ? decodeURIComponent(lineValue)
-            : lineValue}
+          <span
+            onPointerDown={(e) => {
+              const div = e.currentTarget;
+              const sel = window.getSelection();
+              if (sel?.focusNode === div) {
+                e.preventDefault();
+                sel.collapseToEnd();
+              } else {
+                e.preventDefault();
+                sel?.selectAllChildren(div);
+              }
+            }}
+          >
+            {parentType === "URLSearchParams" || parentType === "Cookies"
+              ? decodeURIComponent(lineValue)
+              : lineValue}
+          </span>
         </div>
       </div>
       {children.length > 0 && (
         <ul
           className={clsx(
-            "relative before:hidden [:is(:hover,:focus-within)+&]:before:block before:absolute before:w-px before:h-full [:hover+&]:before:bg-gray-200 [:focus-within+&]:before:bg-blue-200 before:left-[calc(4*var(--depth)*var(--spacing))] before:z-10",
+            "relative before:hidden [:is(:hover,:focus-within)+&]:before:block before:absolute before:w-px before:h-full [:hover+&]:before:bg-gray-200 [:focus-within+&]:before:bg-blue-200 before:left-[calc((4*var(--depth)+2)*var(--spacing))] before:z-10",
             !isOpen && "hidden"
           )}
         >
           {children.map((it) => (
-            <li key={it.key}>
+            <li key={it.key} className="contents">
               <EntryItem
                 entry={it}
                 depth={depth + 1}
@@ -135,13 +160,13 @@ function App() {
     <div className="mx-auto max-w-240 grid grid-rows-[auto_1fr_3fr] w-full h-full text-sm p-6 selection:text-white selection:bg-blue-600 font-mono gap-2">
       <h1 className="text-2xl text-center font-sans">YET ANOTHER DECODER</h1>
       <textarea
-        className="resize-y border rounded-sm px-2 py-1 w-full min-h-30 break-all"
+        className="resize-y rounded-sm p-2 w-full min-h-30 break-all bg-white border border-gray-300 focus-within:outline-1 focus:border-blue-700 focus:outline-blue-700"
         value={value}
         onChange={(e) => setText(e.target.value)}
       ></textarea>
       <div
         className={clsx(
-          "border rounded-sm px-2 py-1 overflow-scroll relative",
+          "rounded-sm py-2 overflow-scroll relative bg-white border border-gray-300 focus-within:outline-1 focus-within:border-blue-700 focus-within:outline-blue-700",
           value === "" && "text-gray-400 flex items-center justify-center"
         )}
       >
