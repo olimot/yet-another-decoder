@@ -58,27 +58,14 @@ const addTextEntryIfFilled =
     entries.push(parent === undefined ? entry : parse(entry, parent));
   };
 
-function postprocess(entry: ParsedEntry, nDecoded: number, parentType: string) {
-  if (entry.type !== "text") return entry;
-  let warning: string | undefined;
-  const type = entry.parsed?.type ?? "";
-  if (
-    parentType === "URLSearchParams" &&
-    !nDecoded &&
-    urlencode(entry.value) !== entry.value
-  ) {
-    warning = `URIComponent Not Encoded`;
-  } else if (
-    parentType !== "URLSearchParams" &&
-    parentType !== "Cookies" &&
-    nDecoded
-  ) {
-    warning = "Redundantly Encoded URIComponent";
-  } else if (type === "JSON" && parentType === "JSON") {
-    warning = "JSON in JSON";
-  }
-  return warning ? { ...entry, warning, nDecoded } : { ...entry, nDecoded };
-}
+const parseEqMap = (text: string, type: string, delimiter: string) => {
+  const value = text.split(delimiter).flatMap((it, i) => {
+    if (!it) return [];
+    const [name = "", value = ""] = it.split(/(?<=^[^=]*)=/);
+    return [mapEntryToParsed(type)([name, value], i)];
+  });
+  return value.length ? { type, value } : undefined;
+};
 
 export function parse(entry: string, parentType?: string): ParsedTextEntry;
 export function parse(
@@ -100,8 +87,10 @@ export function parse(
   if (entry.type !== "text") return entry;
 
   let { value: text } = entry;
-  for (let nDecoded = 0; nDecoded < 3; nDecoded++) {
-    if (/^[a-zA-Z0-9+/-_]=*$/.test(text)) return entry; // base64
+  let output = entry;
+  let nDecoded = 0;
+  for (nDecoded = 0; nDecoded < 3; nDecoded++) {
+    if (/^[a-zA-Z0-9+/-_]=*$/.test(text)) break; // base64
     let json: object | null | undefined;
     try {
       const value = JSON.parse(text);
@@ -109,11 +98,11 @@ export function parse(
     } catch {
       json = undefined;
     }
-    if (json === null) return entry;
+    if (json === null) break;
     if (json !== undefined) {
       const value = Object.entries(json).map(mapEntryToParsed("JSON"));
-      const output = { ...entry, parsed: { type: "JSON", value } };
-      return postprocess(output, nDecoded, parentType);
+      output = { ...entry, parsed: { type: "JSON", value } };
+      break;
     }
 
     let url: URL | undefined;
@@ -134,32 +123,45 @@ export function parse(
       addURLEntry("port", url.port);
       addURLEntry("protocol", url.protocol);
       addURLEntry("searchParams", `${url.searchParams}`, "URL");
-      const output = { ...entry, parsed: { type: "URL", value: urlEntries } };
-      return postprocess(output, nDecoded, parentType);
+      output = { ...entry, parsed: { type: "URL", value: urlEntries } };
+      break;
     }
-
-    const parseEqMap = (text: string, type: string, delimiter: string) => {
-      const value = text.split(delimiter).flatMap((it, i) => {
-        if (!it) return [];
-        const [name = "", value = ""] = it.split(/(?<=^[^=]*)=/);
-        return [mapEntryToParsed(type)([name, value], i)];
-      });
-      if (!value.length) return undefined;
-      const output = { ...entry, parsed: { type, value } };
-      return postprocess(output, nDecoded, parentType);
-    };
 
     if (text.includes("=")) {
       const searchParams = parseEqMap(text, "URLSearchParams", "&");
-      if (searchParams !== undefined) return searchParams;
+      if (searchParams !== undefined) {
+        output = { ...entry, parsed: searchParams };
+        break;
+      }
 
       const cookies = parseEqMap(text, "Cookies", "; ");
-      if (cookies !== undefined) return cookies;
+      if (cookies !== undefined) {
+        output = { ...entry, parsed: cookies };
+        break;
+      }
     }
 
     const decoded = urldecode(text);
-    if (decoded === text) return postprocess(entry, nDecoded, parentType);
+    if (decoded === text) break;
     text = decoded;
   }
-  return postprocess(entry, 2, parentType);
+
+  let warning: string | undefined;
+  const type = output.parsed?.type ?? "";
+  if (
+    parentType === "URLSearchParams" &&
+    !nDecoded &&
+    urlencode(output.value) !== output.value
+  ) {
+    warning = `URIComponent Not Encoded`;
+  } else if (
+    parentType !== "URLSearchParams" &&
+    parentType !== "Cookies" &&
+    nDecoded
+  ) {
+    warning = "Redundantly Encoded URIComponent";
+  } else if (type === "JSON" && parentType === "JSON") {
+    warning = "JSON in JSON";
+  }
+  return warning ? { ...output, warning, nDecoded } : { ...output, nDecoded };
 }
